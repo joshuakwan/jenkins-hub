@@ -6,13 +6,6 @@ import jsonpickle
 
 import pdb
 
-def orm2dict(orm_obj):
-    orm_dict = orm_obj.__dict__
-    for orm_key in orm_dict.keys():
-        if orm_key.startswith("_") or orm_key == 'jenkinsapi.job.Job' or orm_key == 'slave':
-            orm_dict.pop(orm_key)
-    return orm_dict
-
 class JenkinsJob(object):
     def __init__(self, job):
         self._initialize_fields(job)
@@ -38,7 +31,6 @@ class JenkinsSlave(object):
 class JenkinsMaster(object):
     
     def __init__(self, jenkins):
-        # self.jenkins = jenkins
         self._initialize_fields(jenkins)
         
     def _initialize_fields(self, jenkins):
@@ -61,15 +53,24 @@ class JenkinsMaster(object):
             
     def to_JSON(self):
         raw = json.loads(jsonpickle.encode(self))
+        self._tailor_json(raw)
+        return str(raw)
     
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        # del state['__class__']
-        return state
+    def _tailor_json(self, j):
+        if 'keys' in dir(j):
+            if j.has_key('py/object'):
+                j.pop('py/object')
+            for key in j.keys():
+                self._tailor_json(j[key])
+        else:
+            return         
+    
     
 if __name__ == '__main__':
     config = utils.load_config(file_name='config/config.yml')
     jenkins = Jenkins(config[0]['jenkins']['url'])
     jm = JenkinsMaster(jenkins)
     # pdb.set_trace()
-    print jm.to_JSON()  
+    print jm.to_JSON()
+    
+   
